@@ -42,3 +42,13 @@
 ## puk
 
 每一位从哪个数字开始,只有枚举模式才有,需要输入16位数字,0-9
+
+
+# 其他
+## platform-tools更新链接
+### windows:
+https://dl.google.com/android/repository/platform-tools-latest-windows.zip
+### linux:
+https://dl.google.com/android/repository/platform-tools-latest-linux.zip
+### mac:
+https://dl.google.com/android/repository/platform-tools-latest-darwin.zip
