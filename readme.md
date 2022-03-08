@@ -52,3 +52,5 @@ https://dl.google.com/android/repository/platform-tools-latest-windows.zip
 https://dl.google.com/android/repository/platform-tools-latest-linux.zip
 ### mac:
 https://dl.google.com/android/repository/platform-tools-latest-darwin.zip
+
+## 试一下自动生成代码,目前看来还不错
