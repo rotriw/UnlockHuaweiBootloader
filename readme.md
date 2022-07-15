@@ -1,56 +1,71 @@
-# 系统要求
+# platform-tools
 
-#### 用随机模式 <u>windows x64</u>
+安卓提供的工具包
 
-#### 不用随机模式 <u>windows x86 或 windows x64</u>
-
-###### ~~linux用户对这些简单的指令一定非常熟悉,自己编译一下"main.c"就好啦(~~
-
-***
-
-# 步骤说明
-
-###### ~~这一段比较懒直接复制过来了~~
-
-首先将手机连接到电脑,然后打开手机的usb调试,然后运行"检查是否已连接到手机.bat",非fastboot模式如果"List of devices attached"下面是一个空行再下面就是类似"按任意键继续"之类的了就说明手机没连上,fastboot模式下没连上是啥也没有直接"按任意键继续"
-确保连接后如果不在fastboot下则运行"进入fastboot.bat"(可以再用fastboot模式检查一下是否连接),然后运行"编译.bat"来编译解锁程序,如果之前已经编译好了"main.exe"就不用了
-
-***
-
-# 参数说明
-
-## mode
-
-解锁模式
-
-#### 0:枚举
-
-#### 1:随机
-
-<br/>
-
-## order
-
-顺序,只有枚举模式才有
-
-#### 0:正序,0000000000000000-9999999999999999
-
-#### 1:倒序,9999999999999999-0000000000000000
-
-<br/>
-
-## puk
-
-每一位从哪个数字开始,只有枚举模式才有,需要输入16位数字,0-9
-
-
-# 其他
-## platform-tools更新链接
-### windows:
 https://dl.google.com/android/repository/platform-tools-latest-windows.zip
-### linux:
-https://dl.google.com/android/repository/platform-tools-latest-linux.zip
-### mac:
-https://dl.google.com/android/repository/platform-tools-latest-darwin.zip
 
-## 试一下自动生成代码,目前看来还不错
+# unlockhwbl.exe
+
+解锁程序,直接运行即可
+
+没有打印信息的时候说明正在解锁,不要关闭,从fastboot获取到解锁成功的信息后,会等待这一次的fastboot运行结束,此时才会打印信息,随后退出程序
+
+# code.dll
+
+## 说明
+
+是给unlockhwbl.exe提供更新命令行中解锁码函数的dll
+
+默认code.dll的更新行为是从0000000000000000从左到右加到9999999999999999
+
+可以自定义
+
+## 编写说明
+
+需要提供3个函数
+
+解锁码采用小端序宽字符储存(32字节长,但只有偶数下标有效,奇数下标总是0)
+
+### 1.
+
+```c_cpp
+(void *) WINAPI CodeInit(void *);
+```
+
+用于初始化一个code对象
+
+输入:指向要更新的16个宽字符长的解锁码
+
+返回值:成功则不为0,否则为0
+
+典型的例子是CodeInit初始化一个储存状态的结构体,在UpdateCode里根据结构体的内容来更新解锁码
+
+发挥想象,可以在里面加入从命令行读取选项等
+
+### 2.
+
+```c_cpp
+(uint8_t) WINAPI UpdateCode(void *);
+```
+
+用于更新解锁码
+
+输入:是CodeInit的返回值
+
+返回值:成功则不为0,否则为0
+
+ps:不成功也包括没有可用于更新的解锁码了,例如已经加到9999999999999999
+
+发挥想象,比如可以在失败时将当前状态写入磁盘等
+
+### 3.(可选)
+
+```c_cpp
+(void) WINAPI CodeExit(void *);
+```
+
+在退出(错误或完成等)时调用,可用于销毁储存状态的结构体等(发挥想象)
+
+输入是CodeInit的返回值
+
+只要CodeInit成功并且unlockhwbl.exe进程正常退出(包括报错等,只要没有被强制杀死)就一定会调用CodeExit
