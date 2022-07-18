@@ -1,65 +1,10 @@
 #include "unlockhwbl.h"
-PROCESS_INFORMATION ProcessInformation;
-HANDLE heap,wrrd;
-DWORD temp;
-uint8_t data;
-//缓冲区,优先被读取,由基地址,当前指针,缓冲区长度,剩余长度组成
-uint8_t *buff,*crnt;
-DWORD blen=0,nlen=0;
-//子进程存活:阻塞直到子进程死亡或管道有数据;子进程死亡但管道有数据:将剩余数据读完;子进程死亡且管道没数据:设置flag为没数据,主函数跳出读取循环去开新的子进程;
-uint8_t ReadFromPipe(void){
-    //读缓冲区
-    if(nlen){
-        data=*(crnt++);
-        nlen--;
-        temp=1;
-        return 1;
-    }
-    //阻塞直到子进程死亡或管道有数据
-    for(;;){
-        //判断子进程是否结束
-        temp=WaitForSingleObject(ProcessInformation.hProcess,0);
-        //子进程存活
-        if(temp==WAIT_TIMEOUT){
-            //获取管道剩余可读取字节数
-            if(!PeekNamedPipe(wrrd,0,0,0,&temp,0)){return 0;}
-            //有数据
-            if(temp){goto read;}
-            //没数据
-            continue;
-        }
-        //子进程死亡
-        if(temp==WAIT_OBJECT_0){
-            //获取管道剩余可读取字节数
-            if(!PeekNamedPipe(wrrd,0,0,0,&temp,0)){return 0;}
-            //有数据
-            if(temp){
-                read:
-                //分配缓冲区
-                if(blen<temp){
-                    blen=temp;
-                    HeapFree(heap,0,buff);
-                    if(!(buff=HeapAlloc(heap,0,blen))){return 0;}
-                }
-                //读管道所有数据
-                if(!ReadFile(wrrd,buff,temp,&nlen,0)){return 0;}
-                //读缓冲区
-                data=*buff;
-                crnt=buff+1;
-                nlen--;
-            }
-            return 1;
-        }
-        //啥也不是
-        return 0;
-    }
-}
 void main(void){
     CmdLine line={
         //"oem unlock "
         {'o',0,'e',0,'m',0,' ',0,'u',0,'n',0,'l',0,'o',0,'c',0,'k',0,' ',0},
         //16位解锁码
-        {0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},{0,0},
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
         //unicode结尾两个NULL
         0
     };
@@ -67,23 +12,25 @@ void main(void){
     HANDLE stdo;
     if((stdo=GetStdHandle(STD_OUTPUT_HANDLE))==INVALID_HANDLE_VALUE){ExitProcess(0);}
     //hg56th56gd6g
+    DWORD temp;
     WriteFile(stdo,"BuildBy hg56th56gd6g\n",21,&temp,0);
     //获取进程默认heap
+    HANDLE heap;
     if(!(heap=GetProcessHeap())){
         WriteFile(stdo,"GetProcessHeapErr",17,&temp,0);
         ExitProcess(0);
     }
     //创建管道用于fastboot.exe的stdo,2个句柄(stdo的io句柄)
-    if(!(buff=HeapAlloc(heap,0,sizeof(SECURITY_ATTRIBUTES)))){
+    void *stat;
+    if(!(stat=HeapAlloc(heap,0,sizeof(SECURITY_ATTRIBUTES)))){
         WriteFile(stdo,"HeapAllocErr",12,&temp,0);
         ExitProcess(0);
     }
-    blen=sizeof(SECURITY_ATTRIBUTES);
-    ((SECURITY_ATTRIBUTES *)buff)->nLength=sizeof(SECURITY_ATTRIBUTES);
-    ((SECURITY_ATTRIBUTES *)buff)->lpSecurityDescriptor=0;
-    ((SECURITY_ATTRIBUTES *)buff)->bInheritHandle=TRUE;
-    HANDLE wrwr;
-    if(!(CreatePipe(&wrrd,&wrwr,(SECURITY_ATTRIBUTES *)buff,0))){
+    ((SECURITY_ATTRIBUTES *)stat)->nLength=sizeof(SECURITY_ATTRIBUTES);
+    ((SECURITY_ATTRIBUTES *)stat)->lpSecurityDescriptor=0;
+    ((SECURITY_ATTRIBUTES *)stat)->bInheritHandle=TRUE;
+    HANDLE wrrd,wrwr;
+    if(!(CreatePipe(&wrrd,&wrwr,(SECURITY_ATTRIBUTES *)stat,0))){
         WriteFile(stdo,"CreatePipeErr",11,&temp,0);
         ExitProcess(0);
     }
@@ -119,7 +66,6 @@ void main(void){
     }
     //加载并调用CodeInit
     FARPROC func;
-    void *stat;
     if(!(
         (func=GetProcAddress(code,"CodeInit"))&&
         (stat=((CodeInit)func)(&(line.dgt0)))
@@ -132,6 +78,9 @@ void main(void){
         WriteFile(stdo,"GetUpdateCodeErr",16,&temp,0);
         goto ends;
     }
+    //状态,用于判断已经读完"OKAY"的哪个字符了;缓冲区,由基地址,当前指针,最大地址,缓冲区长度组成
+    uint8_t data=0,*base=0,*pnow,*pmax;
+    DWORD blen=0;
     //循环调用CreateProcessW直到管道里读到"OKAY"
     STARTUPINFOW StartUpInfo={
         sizeof(STARTUPINFOW),
@@ -148,43 +97,104 @@ void main(void){
         //stde
         wrwr,
     };
+    PROCESS_INFORMATION ProcessInformation;
     for(;;){
         //创建进程
         if(!CreateProcessW(fpas,(LPWSTR)&line,0,0,TRUE,0,0,dpas,&StartUpInfo,&ProcessInformation)){
             WriteFile(stdo,"CreateProcessErr",16,&temp,0);
             goto ends;
         }
-        //读管道数据
+        //读管道数据,直到子进程死亡并且管道无数据
         for(;;){
-            if(!ReadFromPipe()){
-                rder:
-                WriteFile(stdo,"ReadFromPipeErr",15,&temp,0);
-                goto ends;
+            //判断子进程是否结束
+            temp=WaitForSingleObject(ProcessInformation.hProcess,0);
+            //子进程存活
+            if(temp==WAIT_TIMEOUT){
+                if(!PeekNamedPipe(wrrd,0,0,0,&temp,0)){goto rder;}
+                if(temp){goto read;}
+                continue;
             }
-            if(!temp){break;}
-            for(;;){
-                if(data=='O'){
-                    if(!ReadFromPipe()){goto rder;}
-                    if(!temp){break;}
-                    if(data=='K'){
-                        if(!ReadFromPipe()){goto rder;}
-                        if(!temp){break;}
-                        if(data=='A'){
-                            if(!ReadFromPipe()){goto rder;}
-                            if(!temp){break;}
-                            if(data=='Y'){
-                                //有"OKAY",等待子进程结束然后退出程序
-                                WriteFile(stdo,"WaitFor fastboot Exit...",24,&temp,0);
-                                WaitForSingleObject(ProcessInformation.hProcess,INFINITE);
-                                WriteFile(stdo,"OK",2,&temp,0);
-                                goto ends;
+            //子进程死亡
+            if(temp==WAIT_OBJECT_0){
+                //获取管道剩余可读取字节数
+                if(!PeekNamedPipe(wrrd,0,0,0,&temp,0)){goto rder;}
+                //有数据
+                if(temp){
+                    read:
+                    //分配缓冲区
+                    if(blen<temp){
+                        blen=temp;
+                        //防止内存复制消耗时间
+                        HeapFree(heap,0,base);
+                        if(!(base=HeapAlloc(heap,0,temp))){goto rder;}
+                    }
+                    //读管道所有数据
+                    if(!ReadFile(wrrd,base,temp,&temp,0)){goto rder;}
+                    //更新两个指针
+                    pnow=base;
+                    pmax=base+temp;
+                    //跳转之前的状态
+                    if(data=='O'){goto O;}
+                    if(data=='K'){goto K;}
+                    if(data=='A'){goto A;}
+                    //去缓冲区寻找"OKAY"
+                    for(;;){
+                        if(pnow==pmax){break;}
+                        data=*(pnow++);
+                        if(data=='O'){
+                            O:
+                            if(pnow==pmax){break;}
+                            data=*(pnow++);
+                            if(data=='O'){goto O;}
+                            if(data=='K'){
+                                K:
+                                if(pnow==pmax){break;}
+                                data=*(pnow++);
+                                if(data=='O'){goto O;}
+                                if(data=='A'){
+                                    A:
+                                    if(pnow==pmax){break;}
+                                    data=*(pnow++);
+                                    if(data=='O'){goto O;}
+                                    if(data=='Y'){
+                                        //有"OKAY",等待子进程结束然后退出程序
+                                        WriteFile(stdo,"WaitFor fastboot Exit...",24,&temp,0);
+                                        //读管道数据,这是为了防止子进程因为管道缓冲区满了而阻塞,直到子进程死亡
+                                        for(;;){
+                                            temp=WaitForSingleObject(ProcessInformation.hProcess,0);
+                                            if(temp==WAIT_TIMEOUT){
+                                                if(!PeekNamedPipe(wrrd,0,0,0,&temp,0)){goto rder;}
+                                                if(temp){
+                                                    if(blen<temp){
+                                                        blen=temp;
+                                                        HeapFree(heap,0,base);
+                                                        if(!(base=HeapAlloc(heap,0,blen))){goto rder;}
+                                                    }
+                                                    if(!ReadFile(wrrd,base,temp,&temp,0)){goto rder;}
+                                                }
+                                                continue;
+                                            }
+                                            if(temp==WAIT_OBJECT_0){
+                                                WriteFile(stdo,"OK",2,&temp,0);
+                                                goto ends;
+                                            }
+                                            goto rder;
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
+                    //缓冲区没有剩余字节
                     continue;
                 }
+                //没数据
                 break;
             }
+            //啥也不是
+            rder:
+            WriteFile(stdo,"ReadFromPipeErr",15,&temp,0);
+            goto ends;
         }
         //关闭子进程的进程,主线程句柄
         CloseHandle(ProcessInformation.hProcess);

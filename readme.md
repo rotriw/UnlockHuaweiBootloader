@@ -4,7 +4,7 @@
 
 https://dl.google.com/android/repository/platform-tools-latest-windows.zip
 
-# unlockhwbl.exe
+# unlockhwbl.exe;unlockhwbl_upx.exe
 
 解锁程序,直接运行即可
 
