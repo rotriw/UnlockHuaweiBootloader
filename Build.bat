@@ -3,6 +3,10 @@ set temp_path=output\temp
 set tcc_output=output\tcc
 set clang_output=output\clang
 set gcc_output=output\gcc
+mkdir "%temp_path%"
+mkdir "%tcc_output%"
+mkdir "%clang_output%"
+mkdir "%gcc_output%"
 ::-nostdlib -Wl,-stack=<stack_size>
 ::tcc
 set tcc_option=-l"kernel32" -O3 -x c -m64
