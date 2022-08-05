@@ -1,10 +1,14 @@
-#include "unlockhwbl.h"
+#include "other.h"
+//从code.dll导入的CodeInit,UpdateCode,CodeExit
+DLLImport void * WINAPI CodeInit(void *);
+DLLImport uint8_t WINAPI UpdateCode(void *);
+DLLImport void WINAPI CodeExit(void *);
 void main(void){
     CmdLine line={
         //"oem unlock "
         {'o',0,'e',0,'m',0,' ',0,'u',0,'n',0,'l',0,'o',0,'c',0,'k',0,' ',0},
         //16位解锁码
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
         //unicode结尾两个NULL
         0
     };
@@ -58,26 +62,7 @@ void main(void){
         WriteFile(stdo,"Get\"platform-tools\"FullPathErr",30,&temp,0);
         ExitProcess(0);
     }
-    //加载code.dll
-    HMODULE code;
-    if(!(code=LoadLibraryA("code.dll"))){
-        WriteFile(stdo,"LoadDllErr",10,&temp,0);
-        ExitProcess(0);
-    }
-    //加载并调用CodeInit
-    FARPROC func;
-    if(!(
-        (func=GetProcAddress(code,"CodeInit"))&&
-        (stat=((CodeInit)func)(&(line.dgt0)))
-    )){
-        WriteFile(stdo,"CodeInitErr",11,&temp,0);
-        ExitProcess(0);
-    }
-    //加载UpdateCode
-    if(!(func=GetProcAddress(code,"UpdateCode"))){
-        WriteFile(stdo,"GetUpdateCodeErr",16,&temp,0);
-        goto ends;
-    }
+    stat=CodeInit(&(line.code));
     //状态,用于判断已经读完"OKAY"的哪个字符了;缓冲区,由基地址,当前指针,最大地址,缓冲区长度组成
     uint8_t data=0,*base=0,*pnow,*pmax;
     DWORD blen=0;
@@ -200,15 +185,13 @@ void main(void){
         CloseHandle(ProcessInformation.hProcess);
         CloseHandle(ProcessInformation.hThread);
         //调用UpdateCode
-        if(!((UpdateCode)func)(stat)){
+        if(!UpdateCode(stat)){
             WriteFile(stdo,"UpdateCodeErr",13,&temp,0);
             goto ends;
         }
     }
     //调用CodeExit
     ends:
-    if(func=GetProcAddress(code,"CodeExit")){
-        ((CodeExit)func)(stat);
-    }
+    CodeExit(stat);
     ExitProcess(0);
 }

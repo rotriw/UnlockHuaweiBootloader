@@ -1,7 +1,4 @@
-//windows.h
-#include <windows.h>
-//stdint.h
-#include <stdint.h>
+#include "other.h"
 //宏
 #define PDigit0 (PCodeInfo->dgt0)
 #define PDigit1 (PCodeInfo->dgt1)
@@ -59,7 +56,7 @@ typedef struct{
     uint8_t *dgte;
     uint8_t *dgtf;
 }CodeInfo;
-__declspec(dllexport) CodeInfo * WINAPI CodeInit(uint8_t *PCmdLine){
+DLLExport CodeInfo * WINAPI CodeInit(uint8_t *PCmdLine){
     //获取stdout句柄
     HANDLE stdo;
     if((stdo=GetStdHandle(STD_OUTPUT_HANDLE))==INVALID_HANDLE_VALUE){return 0;}
@@ -113,7 +110,7 @@ __declspec(dllexport) CodeInfo * WINAPI CodeInit(uint8_t *PCmdLine){
     Digitf='0';
     return PCodeInfo;
 }
-__declspec(dllexport) uint8_t WINAPI UpdateCode(CodeInfo *PCodeInfo){
+DLLExport uint8_t WINAPI UpdateCode(CodeInfo *PCodeInfo){
     if(Digit0!='9'){
         Digit0++;
         return 1;
@@ -196,6 +193,6 @@ __declspec(dllexport) uint8_t WINAPI UpdateCode(CodeInfo *PCodeInfo){
     WriteFile(PCodeInfo->stdo,"EndOfCode\n",10,(LPDWORD)&PCodeInfo,0);
     return 0;
 }
-__declspec(dllexport) void WINAPI CodeExit(CodeInfo *PCodeInfo){
+DLLExport void WINAPI CodeExit(CodeInfo *PCodeInfo){
     HeapFree(PCodeInfo->heap,0,PCodeInfo);
 }

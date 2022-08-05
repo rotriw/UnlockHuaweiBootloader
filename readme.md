@@ -1,3 +1,23 @@
+# 这是什么
+
+用于解锁华为bootloader,枚举法(实际上是根据code.dll的行为来决定)
+
+## 基础要求
+
+windows xp及以上,小端序,32位
+
+## 额外要求
+
+推荐64位
+
+# build.bat
+
+用于构建unlockhwbl.exe和code.dll,输出到output\
+
+提供了tcc,mingw gcc,mingw clang llvm的命令行,需要配置路径
+
+默认构建64位的,构建32位可能报错,需要自己调命令行和代码
+
 # platform-tools
 
 安卓提供的工具包
