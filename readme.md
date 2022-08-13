@@ -62,6 +62,8 @@ https://dl.google.com/android/repository/platform-tools-latest-windows.zip
 
 发挥想象,可以在里面加入从命令行读取选项等
 
+注意:CodeInit需要进行第一次的解锁码初始化,因为解锁码初始是0x00
+
 ### 2.
 
 ```c_cpp
