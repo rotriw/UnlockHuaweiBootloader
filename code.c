@@ -1,4 +1,7 @@
-#include "other.h"
+#include <windows.h>
+#include <stdint.h>
+#define DLLImport __declspec(dllimport)
+#define DLLExport __declspec(dllexport)
 //宏
 #define PDigit0 (PCodeInfo->dgt0)
 #define PDigit1 (PCodeInfo->dgt1)
