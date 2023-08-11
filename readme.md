@@ -1,22 +1,32 @@
+# 重要
+
+新版本尚未完成
+
 # 这是什么
 
-用于解锁华为bootloader,枚举法(实际上是根据code.dll的行为来决定)
+用于解锁华为bootloader,它需要向fastboot输入`oem unlock <16位解锁码>`这条命令,你也可以自定义命令格式
 
-## 基础要求
+此工具帮助你高效的用枚举法(实际上是根据code.dll的行为来决定)来不断的尝试16位解锁码
 
-windows xp及以上,小端序,32位
+在之前的版本(称为老版本),它使用CreateProcess来运行命令行解锁,这引入了非常大的开销,但是它作为纯c写的,依然比py/sh脚本性能高(现在重命名为unlockhwbl_cmdline)
 
-## 额外要求
+(称为新版本)现在则直接使用fastboot协议通信,避免一些创建/销毁进程,连接/断开的开销(现在叫unlockhwbl_protocol)
 
-推荐64位,32位会导致数据溢出
+(选择设备部分完全照抄fastboot源码,可以参考adb和fastboot的-s和devices参数,还有ANDROID_SERIAL环境变量)
 
-# build.bat
+参考:
 
-用于构建unlockhwbl.exe和code.dll,输出到output\
+https://github.com/google/python-adb
 
-提供了tcc,mingw gcc,mingw clang llvm的命令行,需要配置路径
+https://github.com/aosp-mirror/platform_system_core
 
-默认构建64位的,构建32位可能报错,需要自己调命令行和代码
+ps:我没有可供测试的设备,有问题欢迎反馈
+
+# 运行要求
+
+windows xp及以上
+
+但是推荐win10 x64
 
 # platform-tools
 
@@ -24,35 +34,100 @@ windows xp及以上,小端序,32位
 
 https://dl.google.com/android/repository/platform-tools-latest-windows.zip
 
-# unlockhwbl.exe;unlockhwbl_upx.exe
+# build.bat
 
-## 说明
+用于构建unlockhwbl.exe和code.dll,输出到build\
 
-解锁程序,在程序所在目录打开命令行运行
+提供了mingw clang llvm的命令,需要配置路径
 
-没有打印信息的时候说明正在解锁,不要关闭,从fastboot获取到解锁成功的信息后才会打印信息,等待这一次的fastboot运行结束后退出程序
+同时构建适用于多个平台的可执行文件
 
-## 命令格式
+脚本很短,只是为我自己写的! :)
 
-unlockhwbl.exe [[0123456789:;<=>?]*8 (管道缓冲区大小,DWORD,用48-63这16个字符表示的十六进制)]
+# unlockhwbl.exe
 
-ps:只要最后8字符是这个16进制表示的DWORD值就行
+解锁程序,双击运行即可,程序结尾会把线程挂起,你可以直接退出或把程序恢复运行
 
-例如0x0fff1234(268374580)管道缓冲区大小(当然不建议实际用这么大的缓冲区):
 
-unlockhwbl NoneNull0 hg56th56gd6g qweqweqwertyuiop[][][]":<DFS"0???1234
+没有打印信息的时候说明正在解锁,不要关闭,有几种情况会打印信息:
 
-或者:
+1. 错误
 
-unlockhwbl.exe 0???1234
+2. 解锁成功,打印正确的解锁码(已经解锁,不需要再次输入命令)
 
-为什么:
+会打印一段开头告诉你程序是活的
 
-第一个参数是可执行文件路径,由cmd解析,解锁程序会从右往左找8字符
+但是如果没打印开头就没动静了,这应该是出错了
+
+(当打印正确的解锁码之后再出现错误,说明依然解锁成功了,只是后续的释放资源步骤出错了)
+
+## 命令行格式
+
+现在已经不需要命令行参数,直接运行即可,现在使用环境变量作为参数传递
+
+如果没有设置某个环境变量,则此参数使用默认值
+
+### 新老版本都有的变量
+
+是为了自定义命令而来,我们将命令视为四个部分:
+
+`<前置字符串><16位解锁码><后置字符串>\x00`
+
+其中16位解锁码由code.dll修改,结尾的空字节由程序填充
+
+整条命令中有且只有结尾的一个空字节,正好符合windows环境变量的特点(以空字节结尾)
+
+用户想要自定义命令只需要修改前置字节和后置字节即可
+
+1. "PRE_STRING"
+
+前置字符串,默认"oem unlock "
+
+2. "END_STRING"
+
+后置字符串,默认""
+
+是的,就是空字符串!因为默认的命令是`oem unlock <16位解锁码>`
+
+### 老版本的变量
+
+(由于老版本的读管道部分为了减小开销不再使用忙轮询(不断的读管道,观察fastboot是否运行完毕),所以引入了这两个参数)
+
+1. "PIPE_SIZE"
+
+fastboot的输出管道大小(字节),fastboot应最多向自己的stderr和stdout写入这么多字节(参考CreatePipe的nSize参数和Read/WriteFile阻塞机制)
+
+DWORD,以十进制字符串形式表示,默认"65536"
+
+(推荐设置为内存页大小(通常为4096)的倍数)
+
+2. "FASTBOOT_TIMEOUT"
+
+每个fastboot进程最多运行多久(毫秒),如果超时了则视为错误
+
+DWORD,以十进制字符串形式表示,默认"10000"
+
+(当你的PIPE_SIZE不足以容纳fastboot输出时,fastboot进程会被阻塞,直到timeout错误)
+
+### 新版本的变量
+
+1. "ANDROID_SERIAL"
+
+fastboot设备字符串,选择设备部分完全照抄fastboot源码,可以参考adb和fastboot的-s和devices参数,还有ANDROID_SERIAL环境变量
+
+默认没有(match_fastboot:1,使用最后连接的usb设备;2,使用最后连接的网络设备;3,回到1直到有设备连接)
+
+注:支持usb,tcp,udp设备
+
+2. "RESPONSE_SIZE"
+
+一次最多接收多少数据(字节),fastboot(好像)没有明确说明设备返回的包最大是多少,有64字节的也有256字节的
+
+DWORD,以十进制字符串形式表示,默认"256"
+
+(建议至少64字节)
 
 # code.dll
-
-## 说明
 
 是给unlockhwbl.exe提供更新命令行中解锁码函数的dll
 
@@ -64,30 +139,31 @@ unlockhwbl.exe 0???1234
 
 需要提供3个函数
 
-解锁码采用小端序宽字符储存(32字节长,但只有偶数下标有效,奇数下标总是0)
+解锁码用16字节储存
+示例:{'9','8','7','6','5','4','3','2','1','0','9','8','7','6','5','4'}
 
 ### 1.
 
 ```c_cpp
-(void *) WINAPI CodeInit(void *);
+(void *) __fastcall CodeInit(void *);
 ```
 
 用于初始化一个code对象
 
-输入:指向要更新的16个宽字符长的解锁码
+输入:指向解锁码的指针
 
 返回值:成功则不为0,否则为0
 
-典型的例子是CodeInit初始化一个储存状态的结构体,在UpdateCode里根据结构体的内容来更新解锁码
+典型的例子是CodeInit初始化一个储存状态的结构体,然后返回这个结构体指针,在UpdateCode里根据结构体的内容来更新解锁码
 
 发挥想象,可以在里面加入从命令行读取选项等
 
-注意:CodeInit需要进行第一次的解锁码初始化,因为解锁码初始是0x00
+注意:CodeInit需要进行第一次的解锁码初始化,因为解锁码的每一位初始是随机值而不是'0'
 
 ### 2.
 
 ```c_cpp
-(uint8_t) WINAPI UpdateCode(void *);
+(uint8_t) __fastcall UpdateCode(void *);
 ```
 
 用于更新解锁码
@@ -103,11 +179,13 @@ ps:不成功也包括没有可用于更新的解锁码了,例如已经加到9999
 ### 3.
 
 ```c_cpp
-(void) WINAPI CodeExit(void *);
+(void) __fastcall CodeExit(void *);
 ```
 
 在退出(错误或完成等)时调用,可用于销毁储存状态的结构体等(发挥想象)
 
 输入是CodeInit的返回值
 
-只要CodeInit成功并且unlockhwbl.exe进程正常退出(包括报错等,只要没有被强制杀死)就一定会调用CodeExit
+只要unlockhwbl.exe进程正常退出(不包括信号退出,但包括错误)就一定会调用CodeExit
+
+应该将输入值0的行为写成什么都不做

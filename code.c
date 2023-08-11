@@ -1,100 +1,25 @@
 #include <windows.h>
 #include <stdint.h>
-#define DLLImport __declspec(dllimport)
-#define DLLExport __declspec(dllexport)
-//宏
-#define PDigit0 (PCodeInfo->dgt0)
-#define PDigit1 (PCodeInfo->dgt1)
-#define PDigit2 (PCodeInfo->dgt2)
-#define PDigit3 (PCodeInfo->dgt3)
-#define PDigit4 (PCodeInfo->dgt4)
-#define PDigit5 (PCodeInfo->dgt5)
-#define PDigit6 (PCodeInfo->dgt6)
-#define PDigit7 (PCodeInfo->dgt7)
-#define PDigit8 (PCodeInfo->dgt8)
-#define PDigit9 (PCodeInfo->dgt9)
-#define PDigita (PCodeInfo->dgta)
-#define PDigitb (PCodeInfo->dgtb)
-#define PDigitc (PCodeInfo->dgtc)
-#define PDigitd (PCodeInfo->dgtd)
-#define PDigite (PCodeInfo->dgte)
-#define PDigitf (PCodeInfo->dgtf)
-#define Digit0 (*PDigit0)
-#define Digit1 (*PDigit1)
-#define Digit2 (*PDigit2)
-#define Digit3 (*PDigit3)
-#define Digit4 (*PDigit4)
-#define Digit5 (*PDigit5)
-#define Digit6 (*PDigit6)
-#define Digit7 (*PDigit7)
-#define Digit8 (*PDigit8)
-#define Digit9 (*PDigit9)
-#define Digita (*PDigita)
-#define Digitb (*PDigitb)
-#define Digitc (*PDigitc)
-#define Digitd (*PDigitd)
-#define Digite (*PDigite)
-#define Digitf (*PDigitf)
-//code对象
-typedef struct{
-    //stdout句柄
-    HANDLE stdo;
-    //堆句柄
-    HANDLE heap;
-    //解锁码指针
-    uint8_t *dgt0;
-    uint8_t *dgt1;
-    uint8_t *dgt2;
-    uint8_t *dgt3;
-    uint8_t *dgt4;
-    uint8_t *dgt5;
-    uint8_t *dgt6;
-    uint8_t *dgt7;
-    uint8_t *dgt8;
-    uint8_t *dgt9;
-    uint8_t *dgta;
-    uint8_t *dgtb;
-    uint8_t *dgtc;
-    uint8_t *dgtd;
-    uint8_t *dgte;
-    uint8_t *dgtf;
-}CodeInfo;
-DLLExport CodeInfo * WINAPI CodeInit(uint8_t *PCmdLine){
-    //获取stdout句柄
-    HANDLE stdo;
-    if((stdo=GetStdHandle(STD_OUTPUT_HANDLE))==INVALID_HANDLE_VALUE){return 0;}
-    //获取进程默认堆
-    HANDLE heap;
-    if(!(heap=GetProcessHeap())){
-        WriteFile(stdo,"GetProcessHeapErr\n",18,(LPDWORD)&heap,0);
-        return 0;
-    }
-    //给CodeInfo分配内存
-    CodeInfo *PCodeInfo;
-    if(!(PCodeInfo=HeapAlloc(heap,0,sizeof(CodeInfo)))){
-        WriteFile(stdo,"HeapAllocErr\n",13,(LPDWORD)&heap,0);
-        return 0;
-    }
-    //设置CodeInfo
-    PCodeInfo->stdo=stdo;
-    PCodeInfo->heap=heap;
-    PDigit0=&(PCmdLine[0]);
-    PDigit1=&(PCmdLine[2]);
-    PDigit2=&(PCmdLine[4]);
-    PDigit3=&(PCmdLine[6]);
-    PDigit4=&(PCmdLine[8]);
-    PDigit5=&(PCmdLine[10]);
-    PDigit6=&(PCmdLine[12]);
-    PDigit7=&(PCmdLine[14]);
-    PDigit8=&(PCmdLine[16]);
-    PDigit9=&(PCmdLine[18]);
-    PDigita=&(PCmdLine[20]);
-    PDigitb=&(PCmdLine[22]);
-    PDigitc=&(PCmdLine[24]);
-    PDigitd=&(PCmdLine[26]);
-    PDigite=&(PCmdLine[28]);
-    PDigitf=&(PCmdLine[30]);
-    //初始化全'0'
+#define Digit0 (pCmdLine[0])
+#define Digit1 (pCmdLine[1])
+#define Digit2 (pCmdLine[2])
+#define Digit3 (pCmdLine[3])
+#define Digit4 (pCmdLine[4])
+#define Digit5 (pCmdLine[5])
+#define Digit6 (pCmdLine[6])
+#define Digit7 (pCmdLine[7])
+#define Digit8 (pCmdLine[8])
+#define Digit9 (pCmdLine[9])
+#define Digita (pCmdLine[10])
+#define Digitb (pCmdLine[11])
+#define Digitc (pCmdLine[12])
+#define Digitd (pCmdLine[13])
+#define Digite (pCmdLine[14])
+#define Digitf (pCmdLine[15])
+BOOL WINAPI DllMain(HINSTANCE hinstDLL,DWORD fdwReason,LPVOID lpvReserved){
+    return TRUE;
+}
+__declspec(dllexport) uint8_t* __fastcall CodeInit(uint8_t *pCmdLine){
     Digit0='0';
     Digit1='0';
     Digit2='0';
@@ -111,9 +36,9 @@ DLLExport CodeInfo * WINAPI CodeInit(uint8_t *PCmdLine){
     Digitd='0';
     Digite='0';
     Digitf='0';
-    return PCodeInfo;
+    return pCmdLine;
 }
-DLLExport uint8_t WINAPI UpdateCode(CodeInfo *PCodeInfo){
+__declspec(dllexport) uint8_t __fastcall UpdateCode(uint8_t *pCmdLine){
     if(Digit0!='9'){
         Digit0++;
         return 1;
@@ -193,9 +118,7 @@ DLLExport uint8_t WINAPI UpdateCode(CodeInfo *PCodeInfo){
         Digitf++;
         return 1;
     }
-    WriteFile(PCodeInfo->stdo,"EndOfCode\n",10,(LPDWORD)&PCodeInfo,0);
     return 0;
 }
-DLLExport void WINAPI CodeExit(CodeInfo *PCodeInfo){
-    HeapFree(PCodeInfo->heap,0,PCodeInfo);
+__declspec(dllexport) void __fastcall CodeExit(uint8_t *pCmdLine){
 }
