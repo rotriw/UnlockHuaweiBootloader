@@ -1,6 +1,6 @@
 @echo off
 rmdir build\ /s /q
-::https://github.com/mstorsjo/llvm-mingw/releases/tag/20220906
+::https://github.com/mstorsjo/llvm-mingw/releases/tag/20230919
 set CLANG_OPTION=-Xlinker /SECTION:.all,ERW -Xlinker /MERGE:.text=.all -Xlinker /MERGE:.rdata=.all -Xlinker /MERGE:.data=.all -Xlinker /STACK:0x40000,0x40000 -Wl,--entry=Main,-O3,-icf=all,-s,--strip-all,--gc-sections,--disable-dynamicbase,--disable-high-entropy-va,--disable-nxcompat,--disable-reloc-section,--disable-runtime-pseudo-reloc,--no-guard-cf,--no-guard-longjmp,--no-insert-timestamp,--no-seh -fno-addrsig -fno-split-stack -fno-stack-clash-protection -fno-stack-protector -mno-stack-arg-probe -nostartfiles -nodefaultlibs -lkernel32 -O3 -flto=full -ffunction-sections -fdata-sections -fno-exceptions -fdwarf-exceptions -fno-asynchronous-unwind-tables -fno-unwind-tables
 ::-Xlinker /SECTION:.all,ERW -Xlinker /MERGE:.text=.all -Xlinker /MERGE:.rdata=.all -Xlinker /MERGE:.data=.all 
 ::native
