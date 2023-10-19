@@ -106,6 +106,10 @@ typedef struct _AdbEndpointInformation {
 #define ADBWIN_API_CLASS     __declspec(dllimport)
 #endif
 
+//补丁:只需要typedef即可
+#undef ADBWIN_API
+#define ADBWIN_API typedef
+
 /** \brief Handle to an API object.
 
   To access USB interface and its components clients must first obtain a
@@ -205,7 +209,7 @@ typedef struct _AdbInterfaceInfo {
   @return Handle to the enumerator object or NULL on failure. If NULL is
           returned GetLastError() provides extended error information.
 */
-ADBWIN_API ADBAPIHANDLE __cdecl AdbEnumInterfaces(GUID class_id,
+ADBWIN_API ADBAPIHANDLE __cdecl FAdbEnumInterfaces(GUID class_id,
                                           bool exclude_not_present,
                                           bool exclude_removed,
                                           bool active_only);
@@ -228,7 +232,7 @@ ADBWIN_API ADBAPIHANDLE __cdecl AdbEnumInterfaces(GUID class_id,
           required for the next entry. ERROR_NO_MORE_ITEMS indicates that
           enumeration is over and there are no more entries to return.
 */
-ADBWIN_API bool __cdecl AdbNextInterface(ADBAPIHANDLE adb_handle,
+ADBWIN_API bool __cdecl FAdbNextInterface(ADBAPIHANDLE adb_handle,
                                  AdbInterfaceInfo* info,
                                  unsigned long* size);
 
@@ -240,7 +244,7 @@ ADBWIN_API bool __cdecl AdbNextInterface(ADBAPIHANDLE adb_handle,
   @return true on success, false on error. If false is returned GetLastError()
           provides extended error information.
 */
-ADBWIN_API bool __cdecl AdbResetInterfaceEnum(ADBAPIHANDLE adb_handle);
+ADBWIN_API bool __cdecl FAdbResetInterfaceEnum(ADBAPIHANDLE adb_handle);
 
 /** \brief Creates USB interface object
 
@@ -249,7 +253,7 @@ ADBWIN_API bool __cdecl AdbResetInterfaceEnum(ADBAPIHANDLE adb_handle);
   @return Handle to the interface object or NULL on failure. If NULL is
           returned GetLastError() provides extended error information.
 */
-ADBWIN_API ADBAPIHANDLE __cdecl AdbCreateInterfaceByName(const wchar_t* interface_name);
+ADBWIN_API ADBAPIHANDLE __cdecl FAdbCreateInterfaceByName(const wchar_t* interface_name);
 
 /** \brief Creates USB interface object based on vendor, product and
   interface IDs.
@@ -265,7 +269,7 @@ ADBWIN_API ADBAPIHANDLE __cdecl AdbCreateInterfaceByName(const wchar_t* interfac
   @return Handle to the interface object or NULL on failure. If NULL is
           returned GetLastError() provides extended error information.
 */
-ADBWIN_API ADBAPIHANDLE __cdecl AdbCreateInterface(GUID class_id,
+ADBWIN_API ADBAPIHANDLE __cdecl FAdbCreateInterface(GUID class_id,
                                            unsigned short vendor_id,
                                            unsigned short product_id,
                                            unsigned char interface_id);
@@ -286,7 +290,7 @@ ADBWIN_API ADBAPIHANDLE __cdecl AdbCreateInterface(GUID class_id,
   @return true on success, false on failure. If false is returned
           GetLastError() provides extended error information.
 */
-ADBWIN_API bool __cdecl AdbGetInterfaceName(ADBAPIHANDLE adb_interface,
+ADBWIN_API bool __cdecl FAdbGetInterfaceName(ADBAPIHANDLE adb_interface,
                                     void* buffer,
                                     unsigned long* buffer_char_size,
                                     bool ansi);
@@ -307,7 +311,7 @@ ADBWIN_API bool __cdecl AdbGetInterfaceName(ADBAPIHANDLE adb_interface,
   @return true on success, false on failure. If false is returned
           GetLastError() provides extended error information.
 */
-ADBWIN_API bool __cdecl AdbGetSerialNumber(ADBAPIHANDLE adb_interface,
+ADBWIN_API bool __cdecl FAdbGetSerialNumber(ADBAPIHANDLE adb_interface,
                                    void* buffer,
                                    unsigned long* buffer_char_size,
                                    bool ansi);
@@ -322,7 +326,7 @@ ADBWIN_API bool __cdecl AdbGetSerialNumber(ADBAPIHANDLE adb_interface,
   @return true on success, false on failure. If false is returned
           GetLastError() provides extended error information.
 */
-ADBWIN_API bool __cdecl AdbGetUsbDeviceDescriptor(ADBAPIHANDLE adb_interface,
+ADBWIN_API bool __cdecl FAdbGetUsbDeviceDescriptor(ADBAPIHANDLE adb_interface,
                                           USB_DEVICE_DESCRIPTOR* desc);
 
 /** \brief Gets descriptor for the selected USB device configuration.
@@ -334,7 +338,7 @@ ADBWIN_API bool __cdecl AdbGetUsbDeviceDescriptor(ADBAPIHANDLE adb_interface,
   @return true on success, false on failure. If false is returned
           GetLastError() provides extended error information.
 */
-ADBWIN_API bool __cdecl AdbGetUsbConfigurationDescriptor(
+ADBWIN_API bool __cdecl FAdbGetUsbConfigurationDescriptor(
                     ADBAPIHANDLE adb_interface,
                     USB_CONFIGURATION_DESCRIPTOR* desc);
 
@@ -347,7 +351,7 @@ ADBWIN_API bool __cdecl AdbGetUsbConfigurationDescriptor(
   @return true on success, false on failure. If false is returned
           GetLastError() provides extended error information.
 */
-ADBWIN_API bool __cdecl AdbGetUsbInterfaceDescriptor(ADBAPIHANDLE adb_interface,
+ADBWIN_API bool __cdecl FAdbGetUsbInterfaceDescriptor(ADBAPIHANDLE adb_interface,
                                              USB_INTERFACE_DESCRIPTOR* desc);
 
 /** \brief Gets information about an endpoint on the given interface.
@@ -362,7 +366,7 @@ ADBWIN_API bool __cdecl AdbGetUsbInterfaceDescriptor(ADBAPIHANDLE adb_interface,
   @return true on success, false on failure. If false is returned
           GetLastError() provides extended error information.
 */
-ADBWIN_API bool __cdecl AdbGetEndpointInformation(ADBAPIHANDLE adb_interface,
+ADBWIN_API bool __cdecl FAdbGetEndpointInformation(ADBAPIHANDLE adb_interface,
                                           unsigned char endpoint_index,
                                           AdbEndpointInformation* info);
 
@@ -375,7 +379,7 @@ ADBWIN_API bool __cdecl AdbGetEndpointInformation(ADBAPIHANDLE adb_interface,
   @return true on success, false on failure. If false is returned
           GetLastError() provides extended error information.
 */
-ADBWIN_API bool __cdecl AdbGetDefaultBulkReadEndpointInformation(
+ADBWIN_API bool __cdecl FAdbGetDefaultBulkReadEndpointInformation(
                     ADBAPIHANDLE adb_interface,
                     AdbEndpointInformation* info);
 
@@ -388,7 +392,7 @@ ADBWIN_API bool __cdecl AdbGetDefaultBulkReadEndpointInformation(
   @return true on success, false on failure. If false is returned
           GetLastError() provides extended error information.
 */
-ADBWIN_API bool __cdecl AdbGetDefaultBulkWriteEndpointInformation(
+ADBWIN_API bool __cdecl FAdbGetDefaultBulkWriteEndpointInformation(
                     ADBAPIHANDLE adb_interface,
                     AdbEndpointInformation* info);
 
@@ -410,7 +414,7 @@ ADBWIN_API bool __cdecl AdbGetDefaultBulkWriteEndpointInformation(
   @return Handle to the opened endpoint object or NULL on failure. If NULL is
           returned GetLastError() provides extended error information.
 */
-ADBWIN_API ADBAPIHANDLE __cdecl AdbOpenEndpoint(ADBAPIHANDLE adb_interface,
+ADBWIN_API ADBAPIHANDLE __cdecl FAdbOpenEndpoint(ADBAPIHANDLE adb_interface,
                                         unsigned char endpoint_index,
                                         AdbOpenAccessType access_type,
                                         AdbOpenSharingMode sharing_mode);
@@ -429,7 +433,7 @@ ADBWIN_API ADBAPIHANDLE __cdecl AdbOpenEndpoint(ADBAPIHANDLE adb_interface,
   @return Handle to the opened endpoint object or NULL on failure. If NULL is
           returned GetLastError() provides extended error information.
 */
-ADBWIN_API ADBAPIHANDLE __cdecl AdbOpenDefaultBulkReadEndpoint(
+ADBWIN_API ADBAPIHANDLE __cdecl FAdbOpenDefaultBulkReadEndpoint(
                             ADBAPIHANDLE adb_interface,
                             AdbOpenAccessType access_type,
                             AdbOpenSharingMode sharing_mode);
@@ -448,7 +452,7 @@ ADBWIN_API ADBAPIHANDLE __cdecl AdbOpenDefaultBulkReadEndpoint(
   @return Handle to the opened endpoint object or NULL on failure. If NULL is
           returned GetLastError() provides extended error information.
 */
-ADBWIN_API ADBAPIHANDLE __cdecl AdbOpenDefaultBulkWriteEndpoint(
+ADBWIN_API ADBAPIHANDLE __cdecl FAdbOpenDefaultBulkWriteEndpoint(
                             ADBAPIHANDLE adb_interface,
                             AdbOpenAccessType access_type,
                             AdbOpenSharingMode sharing_mode);
@@ -460,7 +464,7 @@ ADBWIN_API ADBAPIHANDLE __cdecl AdbOpenDefaultBulkWriteEndpoint(
   @return Handle to the interface for this endpoint or NULL on failure. If NULL
           is returned GetLastError() provides extended error information.
 */
-ADBWIN_API ADBAPIHANDLE __cdecl AdbGetEndpointInterface(ADBAPIHANDLE adb_endpoint);
+ADBWIN_API ADBAPIHANDLE __cdecl FAdbGetEndpointInterface(ADBAPIHANDLE adb_endpoint);
 
 /** \brief Gets information about the given endpoint.
 
@@ -470,7 +474,7 @@ ADBWIN_API ADBAPIHANDLE __cdecl AdbGetEndpointInterface(ADBAPIHANDLE adb_endpoin
   @return true on success, false on failure. If false is returned
           GetLastError() provides extended error information.
 */
-ADBWIN_API bool __cdecl AdbQueryInformationEndpoint(ADBAPIHANDLE adb_endpoint,
+ADBWIN_API bool __cdecl FAdbQueryInformationEndpoint(ADBAPIHANDLE adb_endpoint,
                                             AdbEndpointInformation* info);
 
 /** \brief Asynchronously reads from the given endpoint.
@@ -489,7 +493,7 @@ ADBWIN_API bool __cdecl AdbQueryInformationEndpoint(ADBAPIHANDLE adb_endpoint,
   @return A handle to IO completion object or NULL on failure. If NULL is
           returned GetLastError() provides extended error information.
 */
-ADBWIN_API ADBAPIHANDLE __cdecl AdbReadEndpointAsync(ADBAPIHANDLE adb_endpoint,
+ADBWIN_API ADBAPIHANDLE __cdecl FAdbReadEndpointAsync(ADBAPIHANDLE adb_endpoint,
                                              void* buffer,
                                              unsigned long bytes_to_read,
                                              unsigned long* bytes_read,
@@ -512,7 +516,7 @@ ADBWIN_API ADBAPIHANDLE __cdecl AdbReadEndpointAsync(ADBAPIHANDLE adb_endpoint,
   @return A handle to IO completion object or NULL on failure. If NULL is
           returned GetLastError() provides extended error information.
 */
-ADBWIN_API ADBAPIHANDLE __cdecl AdbWriteEndpointAsync(ADBAPIHANDLE adb_endpoint,
+ADBWIN_API ADBAPIHANDLE __cdecl FAdbWriteEndpointAsync(ADBAPIHANDLE adb_endpoint,
                                               void* buffer,
                                               unsigned long bytes_to_write,
                                               unsigned long* bytes_written,
@@ -532,7 +536,7 @@ ADBWIN_API ADBAPIHANDLE __cdecl AdbWriteEndpointAsync(ADBAPIHANDLE adb_endpoint,
   @return true on success and false on failure. If false is
           returned GetLastError() provides extended error information.
 */
-ADBWIN_API bool __cdecl AdbReadEndpointSync(ADBAPIHANDLE adb_endpoint,
+ADBWIN_API bool __cdecl FAdbReadEndpointSync(ADBAPIHANDLE adb_endpoint,
                                     void* buffer,
                                     unsigned long bytes_to_read,
                                     unsigned long* bytes_read,
@@ -551,7 +555,7 @@ ADBWIN_API bool __cdecl AdbReadEndpointSync(ADBAPIHANDLE adb_endpoint,
   @return true on success and false on failure. If false is
           returned GetLastError() provides extended error information.
 */
-ADBWIN_API bool __cdecl AdbWriteEndpointSync(ADBAPIHANDLE adb_endpoint,
+ADBWIN_API bool __cdecl FAdbWriteEndpointSync(ADBAPIHANDLE adb_endpoint,
                                      void* buffer,
                                      unsigned long bytes_to_write,
                                      unsigned long* bytes_written,
@@ -577,7 +581,7 @@ ADBWIN_API bool __cdecl AdbWriteEndpointSync(ADBAPIHANDLE adb_endpoint,
          extended error information. If GetLastError returns
          ERROR_IO_INCOMPLETE it means that I/O is not yet completed.
 */
-ADBWIN_API bool __cdecl AdbGetOvelappedIoResult(ADBAPIHANDLE adb_io_completion,
+ADBWIN_API bool __cdecl FAdbGetOvelappedIoResult(ADBAPIHANDLE adb_io_completion,
                                         LPOVERLAPPED overlapped,
                                         unsigned long* bytes_transferred,
                                         bool wait);
@@ -590,7 +594,7 @@ ADBWIN_API bool __cdecl AdbGetOvelappedIoResult(ADBAPIHANDLE adb_io_completion,
           incomplete. Regardless of the returned value, caller should
           check GetLastError to validate that handle was OK.
 */
-ADBWIN_API bool __cdecl AdbHasOvelappedIoComplated(ADBAPIHANDLE adb_io_completion);
+ADBWIN_API bool __cdecl FAdbHasOvelappedIoComplated(ADBAPIHANDLE adb_io_completion);
 
 /** \brief Closes handle previously opened with one of the API calls
 
@@ -598,6 +602,6 @@ ADBWIN_API bool __cdecl AdbHasOvelappedIoComplated(ADBAPIHANDLE adb_io_completio
   @return true on success or false on failure. If false is returned
           GetLastError() provides extended error information.
 */
-ADBWIN_API bool __cdecl AdbCloseHandle(ADBAPIHANDLE adb_handle);
+ADBWIN_API bool __cdecl FAdbCloseHandle(ADBAPIHANDLE adb_handle);
 
 #endif  // ANDROID_USB_API_ADBWINAPI_H__

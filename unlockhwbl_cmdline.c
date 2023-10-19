@@ -23,6 +23,9 @@ void Main(void){
     si.dwFlags=STARTF_USESTDHANDLES;
     si.hStdError=si.hStdOutput;
     si.hStdInput=GetStdHandle(STD_INPUT_HANDLE);
+    //设置当前目录到platform-tools,一个是便于加载,另一个它的性能也比较好
+    if(SetCurrentDirectoryA("platform-tools\\")==0)
+        Error("SetCurrentDirectory");
 
     //核心循环
     while(work){

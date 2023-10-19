@@ -8,52 +8,75 @@ typedef struct{
     ADBAPIHANDLE  adb_read_pipe;
     /// Handle to USB write pipe (endpoint)
     ADBAPIHANDLE  adb_write_pipe;
-    //没用上的部分删了
+    //没用上的部分删了,下面是我自己加的函数指针
+    FAdbCloseHandle *AdbCloseHandle;
+    FAdbReadEndpointSync *AdbReadEndpointSync;
+    FAdbWriteEndpointSync *AdbWriteEndpointSync;
 }usb_handle;
 //全局的usb句柄浅拷贝
 usb_handle *__handle;
-#define handle (*__handle)
 
 //关闭usb设备(usb_cleanup_handle)
 __attribute__((noinline))
 __attribute__((cold))
 __attribute__((minsize))
+#define handle (*__handle)
 void CloseDevice(void){
     if(handle.adb_write_pipe)
-        AdbCloseHandle(handle.adb_write_pipe);
+        handle.AdbCloseHandle(handle.adb_write_pipe);
     if(handle.adb_read_pipe)
-        AdbCloseHandle(handle.adb_read_pipe);
+        handle.AdbCloseHandle(handle.adb_read_pipe);
     if(handle.adb_interface)
-        AdbCloseHandle(handle.adb_interface);
+        handle.AdbCloseHandle(handle.adb_interface);
     handle.adb_write_pipe=0;
     handle.adb_read_pipe=0;
     handle.adb_interface=0;
 }
+#undef handle
 
 //初始化usb设备(find_usb_device,recognized_device,do_usb_open)
 __attribute__((noinline))
 __attribute__((cold))
 __attribute__((minsize))
+#define handle (*__handle)
 void MatchFastbootDevice(void){
+    //动态加载AdbWinApi.dll,万一64位的成功了呢,不用FreeLibrary,随进程关闭即可
+    #define LoadAddressA(name,func) (name)=(void*)GetProcAddress(AdbWinApiDll,func);\
+                                    if((name)==0)Error(func)
+    #define LinkMacro(a,b) a##b
+    #define CreateAddressA(name) LinkMacro(F,name)*LoadAddressA(name,#name)
+    HMODULE AdbWinApiDll=LoadLibraryA("platform-tools\\AdbWinApi.dll");
+    if(AdbWinApiDll==0)
+        Error("LoadLibrary");
+    CreateAddressA(AdbEnumInterfaces);
+    CreateAddressA(AdbNextInterface);
+    CreateAddressA(AdbCreateInterfaceByName);
+    CreateAddressA(AdbOpenDefaultBulkReadEndpoint);
+    CreateAddressA(AdbOpenDefaultBulkWriteEndpoint);
+    CreateAddressA(AdbGetUsbInterfaceDescriptor);
+    CreateAddressA(AdbGetSerialNumber);
+    LoadAddressA(handle.AdbReadEndpointSync,"AdbReadEndpointSync");
+    LoadAddressA(handle.AdbWriteEndpointSync,"AdbWriteEndpointSync");
+    LoadAddressA(handle.AdbCloseHandle,"AdbCloseHandle");
+    #undef LoadAddressA
+    #undef LinkMacro
+    #undef CreateAddressA
+
     char entry_buffer[2048];
     unsigned long temp;
     AdbInterfaceInfo *next_interface = (AdbInterfaceInfo *)entry_buffer;
     USB_INTERFACE_DESCRIPTOR interf_desc;
+    LPSTR errmsg;
     //获取环境变量的设备名,env_serial的长度(a)包括空字节,所以它成功时至少为1
     char env_serial[256],serial_number[256];
     DWORD a=GetEnvironmentVariableA("ANDROID_SERIAL",env_serial,256),b;
-    //打开一个枚举句柄,GUID={F72FE0D4-CBCB-407d-8814-9ED673D0DD6B}
-    #define ANDROID_USB_CLASS_ID \
-    {0xf72fe0d4,0xcbcb,0x407d,{0x88,0x14,0x9e,0xd6,0x73,0xd0,0xdd,0x6b}}
+    //打开一个枚举句柄
     GUID usb_class_id=ANDROID_USB_CLASS_ID;
     ADBAPIHANDLE enum_handle = AdbEnumInterfaces(usb_class_id,true,true,true);
     if(enum_handle==0)
         Error("AdbEnumInterfaces");
     //枚举循环
     for(;;){
-        //关闭上一次的句柄
-        close_device_and_reset:
-        CloseDevice();
         //枚举设备,返回0代表没有设备需要枚举了
         temp=2048;
         if(AdbNextInterface(
@@ -61,23 +84,23 @@ void MatchFastbootDevice(void){
             next_interface,
             &temp
         )==0)break;
-        Print("+ AdbNextInterface FoundDevice");
+        Print("+ FoundDevice");
         /*
         这里有一段将((AdbInterfaceInfo *)entry_buffer)->device_name(应该是UNICODE)
         转为ANSI拷贝到栈上2kb缓冲区(和entry_buffer一样大)的代码,但这个转换并不严谨
         只是(char)wchar转换(还有个TODO:最好修改AdbWinApi.dll让它直接返回ANSI)
-        这段代码在find_usb_device函数,并且转换完的内容(是interface_name吗)并没有被使用
+        这段代码在find_usb_device函数,并且转换完的内容(是interface_name吗?)并没有被使用
         同时在下面(do_usb_open,打开三个句柄后)里使用了AdbGetInterfaceName(包含错误检查)
         将interface_name保存到usb_handle结尾的变长空间中,但它同样没有被使用
         我将这两段多余的都去掉了,唯一的副作用应该是去除了AdbGetInterfaceName的错误检查
         其实应该将AdbGetInterfaceName的内容保存到栈上空间,但我不知道分配多大的空间合适
         因为它使用了变长空间而不是和entry_buffer一样大的2kb空间,并且使用u32表示空间大小
-        一个较为合理的猜测是同样分配2kb空间,但它毕竟是猜测,所以我还是决定把这段删掉
+        一个较为合理的猜测是同样分配2kb空间,但毕竟是猜测,所以我还是决定把这段删掉
         */
         //打开interface,失败则枚举下一个设备
         handle.adb_interface=AdbCreateInterfaceByName(next_interface->device_name);
         if(handle.adb_interface == 0){
-            Print("- AdbCreateInterfaceByName SkipDevice");
+            errmsg="AdbCreateInterfaceByName";
             goto close_device_and_reset;
         }
         //打开读端管道(endpoint),失败则枚举下一个设备
@@ -87,7 +110,7 @@ void MatchFastbootDevice(void){
             AdbOpenSharingModeReadWrite
         );
         if(handle.adb_read_pipe == 0){
-            Print("- AdbOpenDefaultBulkReadEndpoint SkipDevice");
+            errmsg="AdbOpenDefaultBulkReadEndpoint";
             goto close_device_and_reset;
         }
         //打开写端管道(endpoint),失败则枚举下一个设备
@@ -97,20 +120,20 @@ void MatchFastbootDevice(void){
             AdbOpenSharingModeReadWrite
         );
         if(handle.adb_write_pipe == 0){
-            Print("- AdbOpenDefaultBulkWriteEndpoint SkipDevice");
+            errmsg="AdbOpenDefaultBulkWriteEndpoint";
             goto close_device_and_reset;
         }
         /*没用上,但包含错误检查
         //Check vendor and product id first(获取供应商和产品id?),失败则枚举下一个设备
         USB_DEVICE_DESCRIPTOR device_desc;
         if(AdbGetUsbDeviceDescriptor(handle.adb_interface,&device_desc)==0){
-            Print("- NoDeviceDescriptor");
+            errmsg="AdbGetUsbDeviceDescriptor";
             goto close_device_and_reset;
         }
         */
         //Then check interface properties(获取接口属性),失败则枚举下一个设备
         if(AdbGetUsbInterfaceDescriptor(handle.adb_interface,&interf_desc)==0){
-            Print("- AdbGetUsbInterfaceDescriptor SkipDevice");
+            errmsg="AdbGetUsbInterfaceDescriptor";
             goto close_device_and_reset;
         }
         //检查刚才获取的内容,不匹配则枚举下一个设备
@@ -122,7 +145,7 @@ void MatchFastbootDevice(void){
             (interf_desc.bInterfaceSubClass != 0x42)||
             (interf_desc.bInterfaceProtocol != 0x03)
         ){
-            Print("- InterfaceDescriptorNotMatched SkipDevice");
+            errmsg="InterfaceDescriptorNotMatched";
             goto close_device_and_reset;
         }
         //如果指定了设备名称,则需要匹配相同的usb名称(serial_number),不匹配则枚举下一个设备
@@ -135,23 +158,31 @@ void MatchFastbootDevice(void){
                 &temp,
                 true
             )==0){
-                Print("- AdbGetSerialNumber SkipDevice");
+                errmsg="AdbGetSerialNumber";
                 goto close_device_and_reset;
             }
             //比较两块储存序列号的内存(包括结尾0,即比较字符串),不相等则枚举下一个设备
             for(b=0;b<a;b++){
                 if(env_serial[b]!=serial_number[b]){
-                    Print("- SerialNumberNotMatched SkipDevice");
+                    errmsg="SerialNumberNotMatched";
                     goto close_device_and_reset;
                 }
             }
         }
         //符合要求,退出枚举设备的循环
         break;
+        //关闭之前的句柄
+        close_device_and_reset:
+        CloseDevice();
+        //打印一条消息,指示之前的设备为什么被跳过
+        Print("-");
+        Print(errmsg);
+        Print("SkipDevice");
     }
     //关闭枚举句柄
-    AdbCloseHandle(enum_handle);
+    handle.AdbCloseHandle(enum_handle);
 }
+#undef handle
 
 //入口函数,为了与AdbWinApi的类型匹配只好不用stdint里的类型了
 #define __ExitEx CloseDevice()
@@ -179,7 +210,7 @@ void Main(void){
         pnow=fcmd;
         temp=clen;
         while(temp){
-            if(AdbWriteEndpointSync(
+            if(fusb.AdbWriteEndpointSync(
                 fusb.adb_write_pipe,
                 pnow,
                 temp,
@@ -193,7 +224,7 @@ void Main(void){
         //循环接受响应包,只有FAIL包才会导致解锁码更新
         for(;;){
             //读取设备,5秒超时,最多读取一些数量的字节,可以不足
-            if(AdbReadEndpointSync(
+            if(fusb.AdbReadEndpointSync(
                 fusb.adb_read_pipe,
                 fbdr,
                 RESPONSE_SIZE,

@@ -163,9 +163,6 @@ void UtilInit(LPSTR *__cseq,uint8_t *__cord){
     #undef cidx
     #undef cmax
     #undef clen
-    //设置当前目录到platform-tools,一个是便于加载,另一个它的性能也比较好
-    if(SetCurrentDirectoryA("platform-tools\\")==0)
-        Error("SetCurrentDirectory");
 }
 
 //更新解锁码,这个循环被展开会导致性能大幅下降,必须显示声明#pragma nounroll

@@ -4,7 +4,7 @@
 
 1. 新版本依赖AdbWinApi.dll,老版本依赖fastboot.exe
 
-3. 新版本只有i686编译的,因为platform-tools没有x86_64的,老版本则同时支持两种
+3. 因为platform-tools没有x86_64的,所以新版本的x86_64可能无法运行,老版本则同时支持两种
 
 # 这是什么
 
@@ -55,8 +55,6 @@ https://dl.google.com/android/repository/platform-tools-latest-windows.zip
 temp文件夹编译结束后可以安全删除(如果有)
 
 提供了clang的命令,脚本很短,只是为我自己写的! :)
-
-构建新版本需要platform-tools文件夹,我们从里面导入dll函数
 
 使用的版本:
 
